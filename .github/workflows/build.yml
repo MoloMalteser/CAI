@@ -1,0 +1,51 @@
+name: Autarkic OpenCode Auto-Model Software Builder
+
+on:
+  workflow_dispatch: # Ermöglicht den manuellen Start im GitHub-Dashboard
+
+permissions:
+  contents: write
+
+jobs:
+  build-software:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js (Prerequisite for OpenCode CLI)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install OpenCode CLI globally
+      run: |
+        npm install -g @opencode/cli
+
+    - name: Initialize OpenCode Workspace
+      run: |
+        opencode init --anonymous || true
+
+    - name: Execute OpenCode AI (Auto Model Selection)
+      env:
+        # Falls du Credits/Tokens über OpenCode Console oder einen eigenen Provider nutzt,
+        # kannst du das Secret hier mitsenden. Ansonsten wählt OpenCode die Standard-Pipeline.
+        OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      run: |
+        opencode run --auto "
+        Schreibe eine komplette, einsatzbereite Python/Flask-Anwendung im Ordner 'app/'.
+        Anforderung: Ein lokaler Webserver mit einem HTML5 Canvas, auf dem der Nutzer Buchstaben per Maus/Touch zeichnen kann.
+        Jeder Buchstabe (A-Z, a-z, 0-9, gängige Sonderzeichen) kann bis zu 80x gezeichnet und als PNG-Sample in dynamisch generierten Ordnern unter 'data/samples/char_<ASCII_ID>/' abgelegt werden.
+        Füge ein Textfeld auf der Webseite hinzu: Wenn der Nutzer Text eingibt, soll das Backend eine PDF-Datei generieren, indem es zufällig aus den bis zu 80 gezeichneten PNG-Samples der entsprechenden Buchstaben wählt.
+        Implementiere eine realistische KI-Varianz beim PDF-Stempeln: Variiere Breite, Höhe und die vertikale Schreiblinie (Offset) bei jedem Buchstaben minimal per Zufall, damit es wie eine echte, unregelmäßige Handschrift (wie in Goodnotes mit Apple Pencil geschrieben) aussieht.
+        Generiere außerdem ein 'start.sh' Shell-Skript im Root-Verzeichnis, um den Server mit einem Befehl zu starten.
+        "
+
+    - name: Commit and Push OpenCode generated software
+      run: |
+        git config --global user.name "opencode-bot"
+        git config --global user.email "opencode-bot@users.noreply.github.com"
+        git add .
+        git commit -m "🤖 Feat: Program autonomously written by OpenCode (Auto-Model)" || echo "No changes to commit"
+        git push
